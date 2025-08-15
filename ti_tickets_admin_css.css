@@ -1,0 +1,411 @@
+/* assets/ti-tickets-admin.css */
+
+/* Dashboard de estatísticas */
+.ti-stats-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    margin: 20px 0 30px 0;
+}
+
+.ti-stat-card {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    text-align: center;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ti-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+}
+
+.ti-stat-card h3 {
+    font-size: 32px;
+    margin: 0 0 10px 0;
+    color: #333;
+    font-weight: 700;
+}
+
+.ti-stat-card p {
+    margin: 0;
+    color: #666;
+    font-weight: 500;
+    text-transform: uppercase;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+}
+
+.ti-stat-open {
+    border-left: 4px solid #17a2b8;
+}
+
+.ti-stat-progress {
+    border-left: 4px solid #ffc107;
+}
+
+.ti-stat-closed {
+    border-left: 4px solid #28a745;
+}
+
+/* Filtros */
+.ti-tickets-filters {
+    margin: 20px 0;
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.ti-tickets-filters select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: white;
+    min-width: 150px;
+}
+
+/* Tabela de tickets */
+.ti-tickets-table {
+    margin-top: 20px;
+}
+
+.ti-tickets-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #333;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.ti-tickets-table td {
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.ti-ticket-description {
+    color: #666;
+    font-size: 13px;
+    margin-top: 5px;
+    line-height: 1.4;
+}
+
+/* Modal administrativo */
+.ti-modal .ti-ticket-details {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 6px;
+    margin-bottom: 25px;
+}
+
+.ti-detail-row {
+    display: flex;
+    margin-bottom: 15px;
+    align-items: center;
+}
+
+.ti-detail-row label {
+    min-width: 120px;
+    font-weight: 600;
+    color: #333;
+    margin-right: 15px;
+}
+
+.ti-detail-row span,
+.ti-detail-row div {
+    flex: 1;
+}
+
+/* Ações do ticket */
+.ti-ticket-actions {
+    background: white;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    margin-bottom: 25px;
+}
+
+.ti-ticket-actions h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.ti-action-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.ti-action-row label {
+    min-width: 150px;
+    font-weight: 600;
+    color: #333;
+    margin-right: 15px;
+}
+
+.ti-action-row select {
+    flex: 1;
+    max-width: 300px;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+/* Seção de comentários no admin */
+.ti-ticket-comments {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.ti-ticket-comments h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #333;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 10px;
+}
+
+.ti-comment {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    border-left: 3px solid #0073aa;
+}
+
+.ti-comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.ti-comment-header strong {
+    color: #333;
+}
+
+.ti-comment-date {
+    color: #666;
+    font-size: 12px;
+}
+
+.ti-comment-content {
+    line-height: 1.5;
+    color: #555;
+    white-space: pre-wrap;
+}
+
+/* Formulário de novo comentário */
+.ti-add-comment {
+    border-top: 1px solid #ddd;
+    padding-top: 20px;
+    margin-top: 20px;
+}
+
+.ti-add-comment textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.ti-comment-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px;
+}
+
+.ti-comment-options label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+}
+
+/* Formulário de novo ticket no admin */
+.ti-ticket-form {
+    background: white;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.ti-ticket-form .form-table th {
+    width: 200px;
+    font-weight: 600;
+}
+
+.ti-ticket-form .form-table td .description {
+    margin-top: 5px;
+    color: #666;
+    font-style: italic;
+}
+
+/* Badges administrativos */
+.ti-status-badge,
+.ti-priority-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: white;
+    letter-spacing: 0.5px;
+}
+
+/* Estados hover para linhas da tabela */
+.ti-tickets-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Botões de ação */
+.ti-tickets-table .button {
+    margin-right: 5px;
+}
+
+/* Loading states */
+.ti-loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Responsividade para admin */
+@media (max-width: 1024px) {
+    .ti-stats-cards {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .ti-tickets-filters {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 768px) {
+    .ti-stats-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .ti-detail-row,
+    .ti-action-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .ti-detail-row label,
+    .ti-action-row label {
+        min-width: auto;
+        margin-right: 0;
+        margin-bottom: 5px;
+    }
+    
+    .ti-comment-options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .ti-tickets-table {
+        font-size: 14px;
+    }
+    
+    .ti-tickets-table th,
+    .ti-tickets-table td {
+        padding: 8px;
+    }
+}
+
+/* Melhorias para acessibilidade */
+.ti-tickets-table th,
+.ti-tickets-table td {
+    padding: 12px 8px;
+}
+
+.button:focus {
+    box-shadow: 0 0 0 2px rgba(0,115,170,0.8);
+}
+
+/* Animações sutis */
+.ti-stat-card,
+.ti-ticket-actions,
+.ti-ticket-comments {
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Indicadores visuais para prioridades */
+.ti-tickets-table tr[data-priority="urgente"] {
+    border-left: 4px solid #dc3545;
+}
+
+.ti-tickets-table tr[data-priority="alta"] {
+    border-left: 4px solid #fd7e14;
+}
+
+.ti-tickets-table tr[data-priority="media"] {
+    border-left: 4px solid #ffc107;
+}
+
+.ti-tickets-table tr[data-priority="baixa"] {
+    border-left: 4px solid #28a745;
+}
+
+/* Melhorias no modal */
+.ti-modal-content {
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Estilos para mensagens de sucesso/erro */
+.notice.ti-notice {
+    margin: 15px 0;
+    padding: 12px;
+    border-left: 4px solid;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.notice.ti-notice.notice-success {
+    border-left-color: #28a745;
+}
+
+.notice.ti-notice.notice-error {
+    border-left-color: #dc3545;
+}
+
+/* Estilo para campos obrigatórios */
+.required::after {
+    content: " *";
+    color: #dc3545;
+    font-weight: bold;
+}
