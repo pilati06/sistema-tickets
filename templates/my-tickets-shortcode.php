@@ -1,55 +1,17 @@
 <?php
-// templates/my-tickets.php
+// templates/my-tickets-shortcode.php
 if (!defined('ABSPATH')) exit;
-
-$current_user = wp_get_current_user();
 ?>
 
-<div class="wrap">
-    <h1>Meus Tickets</h1>
+<div class="ti-my-tickets-container">
+    <h3>Meus Tickets</h3>
     
     <?php if (empty($tickets)): ?>
         <div class="ti-no-tickets">
-            <div class="ti-no-tickets-icon">🎫</div>
-            <h2>Você ainda não criou nenhum ticket</h2>
-            <p>Quando precisar de suporte de TI, você pode criar um novo ticket.</p>
-            <a href="<?php echo admin_url('admin.php?page=ti-new-ticket'); ?>" class="button button-primary button-large">
-                Criar Primeiro Ticket
-            </a>
+            <p>Você ainda não criou nenhum ticket.</p>
         </div>
     <?php else: ?>
-        
-        <div class="ti-tickets-header">
-            <div class="ti-tickets-summary">
-                <p>Você tem <strong><?php echo count($tickets); ?></strong> tickets criados.</p>
-            </div>
-            <div class="ti-tickets-actions">
-                <a href="<?php echo admin_url('admin.php?page=ti-new-ticket'); ?>" class="button button-primary">
-                    Novo Ticket
-                </a>
-            </div>
-        </div>
-        
-        <div class="ti-tickets-filters">
-            <select id="filter-status">
-                <option value="">Todos os Status</option>
-                <option value="aberto">Aberto</option>
-                <option value="em_andamento">Em Andamento</option>
-                <option value="aguardando_teste">Aguardando Teste</option>
-                <option value="concluido">Concluído</option>
-                <option value="cancelado">Cancelado</option>
-            </select>
-            
-            <select id="filter-priority">
-                <option value="">Todas as Prioridades</option>
-                <option value="baixa">Baixa</option>
-                <option value="media">Média</option>
-                <option value="alta">Alta</option>
-                <option value="urgente">Urgente</option>
-            </select>
-        </div>
-        
-        <div class="ti-my-tickets-list">
+        <div class="ti-tickets-grid">
             <?php foreach ($tickets as $ticket): ?>
                 <?php
                 global $wpdb;
@@ -60,78 +22,59 @@ $current_user = wp_get_current_user();
                 ));
                 $analyst = $ticket->assigned_to ? get_user_by('ID', $ticket->assigned_to) : null;
                 ?>
-                
-                <div class="ti-ticket-item" data-status="<?php echo $ticket->status; ?>" data-priority="<?php echo $ticket->priority; ?>">
-                    <div class="ti-ticket-item-header">
-                        <div class="ti-ticket-item-id">
-                            <strong>#<?php echo $ticket->id; ?></strong>
-                        </div>
-                        <div class="ti-ticket-item-date">
-                            <?php echo date('d/m/Y H:i', strtotime($ticket->created_at)); ?>
-                        </div>
+                <div class="ti-ticket-card">
+                    <div class="ti-ticket-header">
+                        <div class="ti-ticket-id">#<?php echo $ticket->id; ?></div>
+                        <div class="ti-ticket-date"><?php echo date('d/m/Y', strtotime($ticket->created_at)); ?></div>
                     </div>
                     
-                    <div class="ti-ticket-item-content">
-                        <h3 class="ti-ticket-item-title">
-                            <?php echo esc_html($ticket->title); ?>
-                        </h3>
-                        
-                        <div class="ti-ticket-item-meta">
-                            <span class="ti-priority-badge" style="background-color: <?php echo ti_get_priority_color($ticket->priority); ?>">
-                                <?php echo ti_get_priority_label($ticket->priority); ?>
-                            </span>
-                            
-                            <span class="ti-status-badge" style="background-color: <?php echo ti_get_status_color($ticket->status); ?>">
-                                <?php echo ti_get_status_label($ticket->status); ?>
-                            </span>
-                            
-                            <?php if ($ticket->category): ?>
-                            <span class="ti-category-badge">
-                                <?php echo esc_html($ticket->category); ?>
-                            </span>
-                            <?php endif; ?>
-                        </div>
-                        
-                        <div class="ti-ticket-item-description">
-                            <?php echo wp_trim_words(esc_html($ticket->description), 30); ?>
-                        </div>
-                        
-                        <div class="ti-ticket-item-info">
-                            <?php if ($analyst): ?>
-                            <div class="ti-analyst-assigned">
-                                <strong>Analista:</strong> <?php echo $analyst->display_name; ?>
-                            </div>
-                            <?php else: ?>
-                            <div class="ti-analyst-assigned">
-                                <strong>Status:</strong> Aguardando atribuição
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if ($comments_count > 0): ?>
-                            <div class="ti-comments-count">
-                                <?php echo $comments_count; ?> comentário(s)
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if ($ticket->updated_at !== $ticket->created_at): ?>
-                            <div class="ti-last-update">
-                                Última atualização: <?php echo date('d/m/Y H:i', strtotime($ticket->updated_at)); ?>
-                            </div>
-                            <?php endif; ?>
-                        </div>
+                    <div class="ti-ticket-title">
+                        <h4><?php echo esc_html($ticket->title); ?></h4>
                     </div>
                     
-                    <div class="ti-ticket-item-actions">
-                        <button class="button button-small ti-view-ticket-details" 
+                    <div class="ti-ticket-meta">
+                        <span class="ti-priority-badge" style="background-color: <?php echo ti_get_priority_color($ticket->priority); ?>">
+                            <?php echo ti_get_priority_label($ticket->priority); ?>
+                        </span>
+                        
+                        <span class="ti-status-badge" style="background-color: <?php echo ti_get_status_color($ticket->status); ?>">
+                            <?php echo ti_get_status_label($ticket->status); ?>
+                        </span>
+                    </div>
+                    
+                    <?php if ($ticket->category): ?>
+                    <div class="ti-ticket-category">
+                        <small>Categoria: <?php echo esc_html($ticket->category); ?></small>
+                    </div>
+                    <?php endif; ?>
+                    
+                    <div class="ti-ticket-description">
+                        <?php echo wp_trim_words(esc_html($ticket->description), 20); ?>
+                    </div>
+                    
+                    <div class="ti-ticket-info">
+                        <?php if ($analyst): ?>
+                        <div class="ti-analyst-info">
+                            <small>Analista: <?php echo $analyst->display_name; ?></small>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($comments_count > 0): ?>
+                        <div class="ti-comments-count">
+                            <small><?php echo $comments_count; ?> comentário(s)</small>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="ti-ticket-actions">
+                        <button class="ti-btn ti-btn-outline ti-view-ticket-details" 
                                 data-ticket-id="<?php echo $ticket->id; ?>">
                             Ver Detalhes
                         </button>
                     </div>
                 </div>
-                
             <?php endforeach; ?>
         </div>
-        
     <?php endif; ?>
 </div>
 
@@ -187,32 +130,18 @@ $current_user = wp_get_current_user();
 
 <script>
 jQuery(document).ready(function($) {
-    // Filtros
-    $('#filter-status, #filter-priority').on('change', function() {
-        var statusFilter = $('#filter-status').val();
-        var priorityFilter = $('#filter-priority').val();
-        
-        $('.ti-ticket-item').each(function() {
-            var show = true;
-            
-            if (statusFilter && $(this).data('status') !== statusFilter) {
-                show = false;
-            }
-            
-            if (priorityFilter && $(this).data('priority') !== priorityFilter) {
-                show = false;
-            }
-            
-            $(this).toggle(show);
-        });
-    });
-    
     // Abrir modal de detalhes
     $('.ti-view-ticket-details').on('click', function() {
         var ticketId = $(this).data('ticket-id');
         loadTicketDetails(ticketId);
         $('#ti-ticket-details-modal').fadeIn(300);
         $('body').addClass('ti-modal-open');
+    });
+    
+    // Fechar modal
+    $('.ti-modal-close').on('click', function() {
+        $('#ti-ticket-details-modal').fadeOut(300);
+        $('body').removeClass('ti-modal-open');
     });
     
     // Fechar modal clicando fora
@@ -224,10 +153,10 @@ jQuery(document).ready(function($) {
     });
     
     function loadTicketDetails(ticketId) {
-        $.post(ajaxurl, {
+        $.post(ti_tickets_ajax.ajax_url, {
             action: 'get_ticket_details',
             ticket_id: ticketId,
-            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+            nonce: ti_tickets_ajax.nonce
         }, function(response) {
             if (response.success) {
                 var ticket = response.data.ticket;
@@ -266,11 +195,5 @@ jQuery(document).ready(function($) {
             }
         });
     }
-    
-    // Fechar modal
-    $('.ti-modal-close').on('click', function() {
-        $('#ti-ticket-details-modal').fadeOut(300);
-        $('body').removeClass('ti-modal-open');
-    });
 });
 </script>

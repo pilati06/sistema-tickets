@@ -202,6 +202,9 @@ $analysts = get_users(array('role' => 'ti_analyst'));
     </div>
 </div>
 
+<!-- Hidden input for nonce -->
+<input type="hidden" id="ti-nonce" value="<?php echo wp_create_nonce('ti_tickets_nonce'); ?>">
+
 <script>
 jQuery(document).ready(function($) {
     var currentTicketId = null;
@@ -211,12 +214,22 @@ jQuery(document).ready(function($) {
         var ticketId = $(this).data('ticket-id');
         currentTicketId = ticketId;
         loadTicketDetails(ticketId);
-        $('#ti-ticket-modal').show();
+        $('#ti-ticket-modal').fadeIn(300);
+        $('body').addClass('ti-modal-open');
     });
     
     // Fechar modal
     $('.ti-modal-close').on('click', function() {
-        $('#ti-ticket-modal').hide();
+        $('#ti-ticket-modal').fadeOut(300);
+        $('body').removeClass('ti-modal-open');
+    });
+    
+    // Fechar modal clicando fora
+    $(window).on('click', function(e) {
+        if ($(e.target).is('#ti-ticket-modal')) {
+            $('#ti-ticket-modal').fadeOut(300);
+            $('body').removeClass('ti-modal-open');
+        }
     });
     
     // Filtros
@@ -249,7 +262,7 @@ jQuery(document).ready(function($) {
             ticket_id: currentTicketId,
             status: newStatus,
             assigned_to: assignedTo,
-            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+            nonce: $('#ti-nonce').val()
         }, function(response) {
             if (response.success) {
                 alert('Ticket atualizado com sucesso!');
@@ -275,7 +288,7 @@ jQuery(document).ready(function($) {
             ticket_id: currentTicketId,
             comment: comment,
             is_internal: isInternal,
-            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+            nonce: $('#ti-nonce').val()
         }, function(response) {
             if (response.success) {
                 $('#ti-new-comment').val('');
@@ -291,7 +304,7 @@ jQuery(document).ready(function($) {
         $.post(ajaxurl, {
             action: 'get_ticket_details',
             ticket_id: ticketId,
-            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+            nonce: $('#ti-nonce').val()
         }, function(response) {
             if (response.success) {
                 var ticket = response.data.ticket;
@@ -316,7 +329,7 @@ jQuery(document).ready(function($) {
         $.post(ajaxurl, {
             action: 'get_ticket_comments',
             ticket_id: ticketId,
-            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+            nonce: $('#ti-nonce').val()
         }, function(response) {
             if (response.success) {
                 var commentsHtml = '';
@@ -328,7 +341,7 @@ jQuery(document).ready(function($) {
                     commentsHtml += '<span class="ti-comment-date">' + comment.created_at + '</span>';
                     commentsHtml += internalBadge;
                     commentsHtml += '</div>';
-                    commentsHtml += '<div class="ti-comment-content">' + comment.comment + '</div>';
+                    commentsHtml += '<div class="ti-comment-content">' + comment.comment.replace(/\n/g, '<br>') + '</div>';
                     commentsHtml += '</div>';
                 });
                 $('#ti-comments-list').html(commentsHtml);

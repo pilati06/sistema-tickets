@@ -47,6 +47,14 @@ class TI_Tickets_System {
         add_action('wp_ajax_export_tickets', array($this, 'ajax_export_tickets'));
         add_action('wp_ajax_generate_report', array($this, 'ajax_generate_report'));
         
+        // AJAX handlers adicionais
+        add_action('wp_ajax_delete_ticket', array($this, 'ajax_delete_ticket'));
+        add_action('wp_ajax_bulk_action_tickets', array($this, 'ajax_bulk_action_tickets'));
+        add_action('wp_ajax_get_dashboard_stats', array($this, 'ajax_get_dashboard_stats'));
+        add_action('wp_ajax_assign_ticket', array($this, 'ajax_assign_ticket'));
+        add_action('wp_ajax_get_ticket_history', array($this, 'ajax_get_ticket_history'));
+        add_action('wp_ajax_subscribe_notifications', array($this, 'ajax_subscribe_notifications'));
+        
         // Shortcodes
         add_shortcode('ti_ticket_form', array($this, 'ticket_form_shortcode'));
         add_shortcode('ti_my_tickets', array($this, 'my_tickets_shortcode'));
@@ -127,9 +135,25 @@ class TI_Tickets_System {
             KEY ticket_id (ticket_id)
         ) $charset_collate;";
         
+        // Tabela de histórico de alterações
+        $table_history = $wpdb->prefix . 'ti_ticket_history';
+        $sql_history = "CREATE TABLE $table_history (
+            id mediumint(9) NOT NULL AUTO_INCREMENT,
+            ticket_id mediumint(9) NOT NULL,
+            user_id bigint(20) NOT NULL,
+            field_changed varchar(50) NOT NULL,
+            old_value text,
+            new_value text,
+            created_at datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id),
+            KEY ticket_id (ticket_id),
+            KEY user_id (user_id)
+        ) $charset_collate;";
+        
         require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
         dbDelta($sql_tickets);
         dbDelta($sql_comments);
+        dbDelta($sql_history);
     }
     
     public function admin_menu() {
@@ -601,6 +625,333 @@ class TI_Tickets_System {
             'report_type' => $report_type,
             'date_range' => array('from' => $date_from, 'to' => $date_to)
         ));
+    }
+    
+    /**
+     * Excluir ticket (apenas admins)
+     */
+    public function ajax_delete_ticket() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('manage_ti_tickets')) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $ticket_id = intval($_POST['ticket_id']);
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        $table_comments = $wpdb->prefix . 'ti_ticket_comments';
+        
+        // Excluir comentários primeiro
+        $wpdb->delete($table_comments, array('ticket_id' => $ticket_id), array('%d'));
+        
+        // Excluir ticket
+        $result = $wpdb->delete($table_tickets, array('id' => $ticket_id), array('%d'));
+        
+        if ($result !== false) {
+            wp_send_json_success('Ticket excluído com sucesso');
+        } else {
+            wp_send_json_error('Erro ao excluir ticket');
+        }
+    }
+    
+    /**
+     * Ações em lote para tickets
+     */
+    public function ajax_bulk_action_tickets() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('manage_ti_tickets')) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $action = sanitize_text_field($_POST['action_type']);
+        $ticket_ids = array_map('intval', $_POST['ticket_ids']);
+        $value = isset($_POST['value']) ? sanitize_text_field($_POST['value']) : '';
+        
+        if (empty($ticket_ids)) {
+            wp_send_json_error('Nenhum ticket selecionado');
+        }
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        
+        $updated = 0;
+        
+        foreach ($ticket_ids as $ticket_id) {
+            $update_data = array();
+            
+            switch ($action) {
+                case 'change_status':
+                    if (in_array($value, array('aberto', 'em_andamento', 'aguardando_teste', 'concluido', 'cancelado'))) {
+                        $update_data['status'] = $value;
+                    }
+                    break;
+                    
+                case 'change_priority':
+                    if (in_array($value, array('baixa', 'media', 'alta', 'urgente'))) {
+                        $update_data['priority'] = $value;
+                    }
+                    break;
+                    
+                case 'assign_analyst':
+                    if (is_numeric($value) && $value > 0) {
+                        $update_data['assigned_to'] = intval($value);
+                    }
+                    break;
+                    
+                case 'delete':
+                    $wpdb->delete($table_tickets, array('id' => $ticket_id), array('%d'));
+                    $updated++;
+                    continue 2;
+            }
+            
+            if (!empty($update_data)) {
+                $result = $wpdb->update(
+                    $table_tickets,
+                    $update_data,
+                    array('id' => $ticket_id),
+                    array('%s'),
+                    array('%d')
+                );
+                
+                if ($result !== false) {
+                    $updated++;
+                    
+                    // Trigger hook para notificações
+                    if (isset($update_data['status'])) {
+                        do_action('ti_ticket_status_changed', $ticket_id, $update_data['status']);
+                    }
+                }
+            }
+        }
+        
+        wp_send_json_success("$updated tickets atualizados com sucesso");
+    }
+    
+    /**
+     * Obter estatísticas do dashboard
+     */
+    public function ajax_get_dashboard_stats() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('view_all_tickets') && !current_user_can('manage_ti_tickets')) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        
+        // Estatísticas básicas
+        $stats = array(
+            'total' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets"),
+            'aberto' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE status = 'aberto'"),
+            'em_andamento' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE status = 'em_andamento'"),
+            'aguardando_teste' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE status = 'aguardando_teste'"),
+            'concluido' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE status = 'concluido'"),
+            'cancelado' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE status = 'cancelado'"),
+        );
+        
+        // Estatísticas por prioridade
+        $priority_stats = array(
+            'baixa' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE priority = 'baixa'"),
+            'media' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE priority = 'media'"),
+            'alta' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE priority = 'alta'"),
+            'urgente' => $wpdb->get_var("SELECT COUNT(*) FROM $table_tickets WHERE priority = 'urgente'"),
+        );
+        
+        // Tickets por analista
+        $analyst_stats = $wpdb->get_results(
+            "SELECT assigned_to, COUNT(*) as count 
+             FROM $table_tickets 
+             WHERE assigned_to IS NOT NULL 
+             GROUP BY assigned_to"
+        );
+        
+        $analyst_data = array();
+        foreach ($analyst_stats as $stat) {
+            $user = get_user_by('ID', $stat->assigned_to);
+            if ($user) {
+                $analyst_data[] = array(
+                    'name' => $user->display_name,
+                    'count' => $stat->count
+                );
+            }
+        }
+        
+        // Tickets criados nos últimos 30 dias
+        $recent_tickets = $wpdb->get_var(
+            "SELECT COUNT(*) FROM $table_tickets 
+             WHERE created_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)"
+        );
+        
+        // Tempo médio de resolução (em dias)
+        $avg_resolution_time = $wpdb->get_var(
+            "SELECT AVG(DATEDIFF(updated_at, created_at)) 
+             FROM $table_tickets 
+             WHERE status = 'concluido'"
+        );
+        
+        wp_send_json_success(array(
+            'basic_stats' => $stats,
+            'priority_stats' => $priority_stats,
+            'analyst_stats' => $analyst_data,
+            'recent_tickets' => $recent_tickets,
+            'avg_resolution_time' => round($avg_resolution_time, 1)
+        ));
+    }
+    
+    /**
+     * Atribuir ticket a um analista
+     */
+    public function ajax_assign_ticket() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('assign_tickets') && !current_user_can('manage_ti_tickets')) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $ticket_id = intval($_POST['ticket_id']);
+        $analyst_id = intval($_POST['analyst_id']);
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        
+        // Verificar se o analista existe e tem a role correta
+        $analyst = get_user_by('ID', $analyst_id);
+        if (!$analyst || !in_array('ti_analyst', $analyst->roles) && !in_array('ti_supervisor', $analyst->roles)) {
+            wp_send_json_error('Analista inválido');
+        }
+        
+        $result = $wpdb->update(
+            $table_tickets,
+            array(
+                'assigned_to' => $analyst_id,
+                'status' => 'em_andamento'
+            ),
+            array('id' => $ticket_id),
+            array('%d', '%s'),
+            array('%d')
+        );
+        
+        if ($result !== false) {
+            // Adicionar comentário automático
+            $table_comments = $wpdb->prefix . 'ti_ticket_comments';
+            $wpdb->insert(
+                $table_comments,
+                array(
+                    'ticket_id' => $ticket_id,
+                    'user_id' => get_current_user_id(),
+                    'comment' => "Ticket atribuído para {$analyst->display_name}",
+                    'is_internal' => 0
+                ),
+                array('%d', '%d', '%s', '%d')
+            );
+            
+            // Notificar o analista por email
+            $this->notify_analyst_assignment($ticket_id, $analyst_id);
+            
+            wp_send_json_success('Ticket atribuído com sucesso');
+        } else {
+            wp_send_json_error('Erro ao atribuir ticket');
+        }
+    }
+    
+    /**
+     * Obter histórico de alterações do ticket
+     */
+    public function ajax_get_ticket_history() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('manage_ti_tickets')) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $ticket_id = intval($_POST['ticket_id']);
+        
+        global $wpdb;
+        $table_history = $wpdb->prefix . 'ti_ticket_history';
+        
+        $history = $wpdb->get_results($wpdb->prepare(
+            "SELECT h.*, u.display_name as user_name 
+             FROM $table_history h 
+             LEFT JOIN {$wpdb->users} u ON h.user_id = u.ID 
+             WHERE h.ticket_id = %d 
+             ORDER BY h.created_at DESC",
+            $ticket_id
+        ));
+        
+        wp_send_json_success(array('history' => $history));
+    }
+    
+    /**
+     * Sistema de notificações push (usando WebSockets ou Server-Sent Events)
+     */
+    public function ajax_subscribe_notifications() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        // Implementar sistema de notificações em tempo real
+        // Pode usar tecnologias como Socket.IO, Pusher, ou Server-Sent Events
+        
+        wp_send_json_success('Inscrito nas notificações');
+    }
+    
+    /**
+     * Registrar alteração no histórico
+     */
+    public function log_ticket_change($ticket_id, $field, $old_value, $new_value, $user_id = null) {
+        if ($old_value === $new_value) return;
+        
+        global $wpdb;
+        $table_history = $wpdb->prefix . 'ti_ticket_history';
+        
+        $wpdb->insert(
+            $table_history,
+            array(
+                'ticket_id' => $ticket_id,
+                'user_id' => $user_id ?: get_current_user_id(),
+                'field_changed' => $field,
+                'old_value' => $old_value,
+                'new_value' => $new_value
+            ),
+            array('%d', '%d', '%s', '%s', '%s')
+        );
+    }
+    
+    /**
+     * Notificar analista sobre atribuição
+     */
+    public function notify_analyst_assignment($ticket_id, $analyst_id) {
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        
+        $ticket = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_tickets WHERE id = %d",
+            $ticket_id
+        ));
+        
+        $analyst = get_user_by('ID', $analyst_id);
+        $requester = get_user_by('ID', $ticket->requester_id);
+        
+        if (!$ticket || !$analyst) return;
+        
+        $subject = "Ticket #{$ticket_id} atribuído para você - {$ticket->title}";
+        $message = "Olá {$analyst->display_name},\n\n";
+        $message .= "Um novo ticket foi atribuído para você:\n\n";
+        $message .= "Ticket #: {$ticket_id}\n";
+        $message .= "Título: {$ticket->title}\n";
+        $message .= "Solicitante: {$requester->display_name}\n";
+        $message .= "Prioridade: " . ti_get_priority_label($ticket->priority) . "\n";
+        $message .= "Categoria: {$ticket->category}\n\n";
+        $message .= "Descrição:\n{$ticket->description}\n\n";
+        $message .= "Acesse o painel administrativo para mais detalhes e para atualizar o status.";
+        
+        wp_mail($analyst->user_email, $subject, $message);
     }
     
     public function send_status_notification($ticket_id, $new_status) {

@@ -150,7 +150,7 @@ $analysts = get_users(array('role' => 'ti_analyst'));
                     <small><?php echo date('d/m/Y H:i', strtotime($ticket->created_at)); ?></small>
                 </div>
                 <div class="ti-quick-ticket-actions">
-                    <button class="button button-small ti-view-ticket" data-ticket-id="<?php echo $ticket->id; ?>">
+                    <button class="button button-small ti-view-ticket-details" data-ticket-id="<?php echo $ticket->id; ?>">
                         Ver Detalhes
                     </button>
                     <select class="ti-quick-status-change" data-ticket-id="<?php echo $ticket->id; ?>">
@@ -213,7 +213,7 @@ $analysts = get_users(array('role' => 'ti_analyst'));
                         </td>
                         <td><?php echo date('d/m/Y H:i', strtotime($ticket->created_at)); ?></td>
                         <td>
-                            <button class="button button-small ti-view-ticket" data-ticket-id="<?php echo $ticket->id; ?>">
+                            <button class="button button-small ti-view-ticket-details" data-ticket-id="<?php echo $ticket->id; ?>">
                                 Ver
                             </button>
                             <?php if ($can_manage): ?>
@@ -263,6 +263,53 @@ $analysts = get_users(array('role' => 'ti_analyst'));
                 <button class="button" onclick="exportTickets()">Exportar</button>
             </div>
             <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para detalhes do ticket -->
+<div id="ti-ticket-modal" class="ti-modal" style="display: none;">
+    <div class="ti-modal-content">
+        <div class="ti-modal-header">
+            <h2>Ticket #<span id="ti-modal-ticket-id"></span></h2>
+            <span class="ti-modal-close">&times;</span>
+        </div>
+        <div class="ti-modal-body">
+            <div class="ti-ticket-details">
+                <div class="ti-detail-row">
+                    <label>Título:</label>
+                    <span id="ti-detail-title"></span>
+                </div>
+                <div class="ti-detail-row">
+                    <label>Solicitante:</label>
+                    <span id="ti-detail-requester"></span>
+                </div>
+                <div class="ti-detail-row">
+                    <label>Prioridade:</label>
+                    <span id="ti-detail-priority"></span>
+                </div>
+                <div class="ti-detail-row">
+                    <label>Status:</label>
+                    <span id="ti-detail-status"></span>
+                </div>
+                <div class="ti-detail-row">
+                    <label>Analista:</label>
+                    <span id="ti-detail-analyst"></span>
+                </div>
+                <div class="ti-detail-row">
+                    <label>Categoria:</label>
+                    <span id="ti-detail-category"></span>
+                </div>
+                <div class="ti-detail-row">
+                    <label>Descrição:</label>
+                    <div id="ti-detail-description"></div>
+                </div>
+            </div>
+            
+            <div class="ti-ticket-comments">
+                <h3>Comentários</h3>
+                <div id="ti-comments-list"></div>
+            </div>
         </div>
     </div>
 </div>
@@ -340,6 +387,7 @@ $analysts = get_users(array('role' => 'ti_analyst'));
 <script>
 jQuery(document).ready(function($) {
     var currentAssignTicketId = null;
+    var currentTicketId = null;
     
     // Modal de relatórios
     function showReportsModal() {
@@ -350,8 +398,70 @@ jQuery(document).ready(function($) {
     
     // Fechar modais
     $('.ti-modal-close').on('click', function() {
-        $(this).closest('.ti-modal').hide();
+        $(this).closest('.ti-modal').fadeOut(300);
+        $('body').removeClass('ti-modal-open');
     });
+    
+    // Ver detalhes do ticket
+    $('.ti-view-ticket-details').on('click', function() {
+        var ticketId = $(this).data('ticket-id');
+        currentTicketId = ticketId;
+        loadTicketDetails(ticketId);
+        $('#ti-ticket-modal').fadeIn(300);
+        $('body').addClass('ti-modal-open');
+    });
+    
+    // Fechar modal clicando fora
+    $(window).on('click', function(e) {
+        if ($(e.target).is('.ti-modal')) {
+            $('.ti-modal').fadeOut(300);
+            $('body').removeClass('ti-modal-open');
+        }
+    });
+    
+    // Carregar detalhes do ticket
+    function loadTicketDetails(ticketId) {
+        $.post(ajaxurl, {
+            action: 'get_ticket_details',
+            ticket_id: ticketId,
+            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                var ticket = response.data.ticket;
+                var comments = response.data.comments || [];
+                
+                $('#ti-modal-ticket-id').text(ticket.id);
+                $('#ti-detail-title').text(ticket.title);
+                $('#ti-detail-requester').text(ticket.requester_name);
+                $('#ti-detail-priority').html('<span class="ti-priority-badge" style="background-color: ' + ticket.priority_color + '">' + ticket.priority_label + '</span>');
+                $('#ti-detail-status').html('<span class="ti-status-badge" style="background-color: ' + ticket.status_color + '">' + ticket.status_label + '</span>');
+                $('#ti-detail-analyst').text(ticket.analyst_name || 'Não atribuído');
+                $('#ti-detail-category').text(ticket.category || 'N/A');
+                $('#ti-detail-description').text(ticket.description);
+                
+                // Carregar comentários
+                var commentsHtml = '';
+                if (comments.length === 0) {
+                    commentsHtml = '<p class="ti-no-comments">Nenhum comentário ainda.</p>';
+                } else {
+                    comments.forEach(function(comment) {
+                        if (!comment.is_internal) { // Só mostra comentários não internos
+                            commentsHtml += '<div class="ti-comment-item">';
+                            commentsHtml += '<div class="ti-comment-header">';
+                            commentsHtml += '<strong>' + comment.user_name + '</strong>';
+                            commentsHtml += '<span class="ti-comment-date">' + comment.created_at + '</span>';
+                            commentsHtml += '</div>';
+                            commentsHtml += '<div class="ti-comment-text">' + comment.comment.replace(/\n/g, '<br>') + '</div>';
+                            commentsHtml += '</div>';
+                        }
+                    });
+                }
+                $('#ti-comments-list').html(commentsHtml);
+            } else {
+                alert('Erro ao carregar detalhes do ticket.');
+            }
+        });
+    }
     
     // Quick assign
     $('.ti-quick-assign').on('click', function() {
