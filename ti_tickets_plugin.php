@@ -35,10 +35,17 @@ class TI_Tickets_System {
         add_action('admin_menu', array($this, 'admin_menu'));
         add_action('wp_enqueue_scripts', array($this, 'enqueue_scripts'));
         add_action('admin_enqueue_scripts', array($this, 'admin_enqueue_scripts'));
+        
+        // AJAX handlers
         add_action('wp_ajax_create_ticket', array($this, 'ajax_create_ticket'));
         add_action('wp_ajax_nopriv_create_ticket', array($this, 'ajax_create_ticket'));
         add_action('wp_ajax_update_ticket_status', array($this, 'ajax_update_ticket_status'));
         add_action('wp_ajax_add_ticket_comment', array($this, 'ajax_add_ticket_comment'));
+        add_action('wp_ajax_get_ticket_details', array($this, 'ajax_get_ticket_details'));
+        add_action('wp_ajax_nopriv_get_ticket_details', array($this, 'ajax_get_ticket_details'));
+        add_action('wp_ajax_get_ticket_comments', array($this, 'ajax_get_ticket_comments'));
+        add_action('wp_ajax_export_tickets', array($this, 'ajax_export_tickets'));
+        add_action('wp_ajax_generate_report', array($this, 'ajax_generate_report'));
         
         // Shortcodes
         add_shortcode('ti_ticket_form', array($this, 'ticket_form_shortcode'));
@@ -74,6 +81,16 @@ class TI_Tickets_System {
             'update_ticket_status' => true,
             'comment_on_tickets' => true,
         ));
+        
+        // Adiciona capabilities para admin
+        $admin_role = get_role('administrator');
+        if ($admin_role) {
+            $admin_role->add_cap('manage_ti_tickets');
+            $admin_role->add_cap('view_all_tickets');
+            $admin_role->add_cap('assign_tickets');
+            $admin_role->add_cap('update_ticket_status');
+            $admin_role->add_cap('comment_on_tickets');
+        }
     }
     
     public function create_tables() {
@@ -116,18 +133,29 @@ class TI_Tickets_System {
     }
     
     public function admin_menu() {
+        // Menu principal com dashboard
         add_menu_page(
             'Sistema de Tickets TI',
             'Tickets TI',
             'read',
-            'ti-tickets',
-            array($this, 'admin_page'),
+            'ti-dashboard',
+            array($this, 'dashboard_page'),
             'dashicons-tickets-alt',
             30
         );
         
+        // Dashboard como primeira opção
         add_submenu_page(
-            'ti-tickets',
+            'ti-dashboard',
+            'Dashboard',
+            'Dashboard',
+            'read',
+            'ti-dashboard',
+            array($this, 'dashboard_page')
+        );
+        
+        add_submenu_page(
+            'ti-dashboard',
             'Todos os Tickets',
             'Todos os Tickets',
             'view_all_tickets',
@@ -136,7 +164,7 @@ class TI_Tickets_System {
         );
         
         add_submenu_page(
-            'ti-tickets',
+            'ti-dashboard',
             'Meus Tickets',
             'Meus Tickets',
             'read',
@@ -145,7 +173,7 @@ class TI_Tickets_System {
         );
         
         add_submenu_page(
-            'ti-tickets',
+            'ti-dashboard',
             'Novo Ticket',
             'Novo Ticket',
             'read',
@@ -167,11 +195,20 @@ class TI_Tickets_System {
     public function admin_enqueue_scripts() {
         wp_enqueue_script('ti-tickets-admin-js', TI_TICKETS_PLUGIN_URL . 'assets/ti-tickets-admin.js', array('jquery'), TI_TICKETS_VERSION, true);
         wp_enqueue_style('ti-tickets-admin-css', TI_TICKETS_PLUGIN_URL . 'assets/ti-tickets-admin.css', array(), TI_TICKETS_VERSION);
+        
+        wp_localize_script('ti-tickets-admin-js', 'ti_tickets_admin_ajax', array(
+            'ajax_url' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('ti_tickets_nonce')
+        ));
+    }
+    
+    public function dashboard_page() {
+        include TI_TICKETS_PLUGIN_DIR . 'templates/dashboard.php';
     }
     
     public function admin_page() {
         $current_user = wp_get_current_user();
-        $can_view_all = current_user_can('view_all_tickets');
+        $can_view_all = current_user_can('view_all_tickets') || current_user_can('manage_ti_tickets');
         
         global $wpdb;
         $table_tickets = $wpdb->prefix . 'ti_tickets';
@@ -235,7 +272,7 @@ class TI_Tickets_System {
         check_ajax_referer('ti_tickets_nonce', 'nonce');
         
         if (!is_user_logged_in()) {
-            wp_die('Acesso negado');
+            wp_send_json_error('Acesso negado');
         }
         
         $title = sanitize_text_field($_POST['title']);
@@ -272,7 +309,7 @@ class TI_Tickets_System {
         check_ajax_referer('ti_tickets_nonce', 'nonce');
         
         if (!current_user_can('update_ticket_status') && !current_user_can('manage_ti_tickets')) {
-            wp_die('Acesso negado');
+            wp_send_json_error('Acesso negado');
         }
         
         $ticket_id = intval($_POST['ticket_id']);
@@ -307,7 +344,7 @@ class TI_Tickets_System {
         check_ajax_referer('ti_tickets_nonce', 'nonce');
         
         if (!current_user_can('comment_on_tickets') && !current_user_can('manage_ti_tickets')) {
-            wp_die('Acesso negado');
+            wp_send_json_error('Acesso negado');
         }
         
         $ticket_id = intval($_POST['ticket_id']);
@@ -335,6 +372,237 @@ class TI_Tickets_System {
         }
     }
     
+    public function ajax_get_ticket_details() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $ticket_id = intval($_POST['ticket_id']);
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        $table_comments = $wpdb->prefix . 'ti_ticket_comments';
+        
+        // Buscar ticket
+        $ticket = $wpdb->get_row($wpdb->prepare(
+            "SELECT * FROM $table_tickets WHERE id = %d",
+            $ticket_id
+        ));
+        
+        if (!$ticket) {
+            wp_send_json_error('Ticket não encontrado');
+        }
+        
+        // Verificar permissões
+        $current_user = wp_get_current_user();
+        $can_view = false;
+        
+        if (current_user_can('manage_ti_tickets') || current_user_can('view_all_tickets')) {
+            $can_view = true;
+        } elseif ($ticket->requester_id == $current_user->ID) {
+            $can_view = true;
+        } elseif (current_user_can('manage_assigned_tickets') && $ticket->assigned_to == $current_user->ID) {
+            $can_view = true;
+        }
+        
+        if (!$can_view) {
+            wp_send_json_error('Sem permissão para ver este ticket');
+        }
+        
+        // Buscar dados adicionais
+        $requester = get_user_by('ID', $ticket->requester_id);
+        $analyst = $ticket->assigned_to ? get_user_by('ID', $ticket->assigned_to) : null;
+        
+        // Buscar comentários
+        $comments_query = "SELECT c.*, u.display_name as user_name 
+                          FROM $table_comments c 
+                          LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID 
+                          WHERE c.ticket_id = %d 
+                          ORDER BY c.created_at ASC";
+        
+        $comments = $wpdb->get_results($wpdb->prepare($comments_query, $ticket_id));
+        
+        // Se não é admin, filtrar comentários internos
+        if (!current_user_can('manage_ti_tickets')) {
+            $comments = array_filter($comments, function($comment) {
+                return $comment->is_internal == 0;
+            });
+        }
+        
+        // Formatar dados do ticket
+        $ticket_data = array(
+            'id' => $ticket->id,
+            'title' => $ticket->title,
+            'description' => $ticket->description,
+            'status' => $ticket->status,
+            'priority' => $ticket->priority,
+            'category' => $ticket->category,
+            'created_at' => $this->format_date($ticket->created_at),
+            'updated_at' => $this->format_date($ticket->updated_at),
+            'requester_name' => $requester ? $requester->display_name : 'N/A',
+            'analyst_name' => $analyst ? $analyst->display_name : null,
+            'assigned_to' => $ticket->assigned_to,
+            'status_label' => ti_get_status_label($ticket->status),
+            'priority_label' => ti_get_priority_label($ticket->priority),
+            'status_color' => ti_get_status_color($ticket->status),
+            'priority_color' => ti_get_priority_color($ticket->priority),
+        );
+        
+        // Formatar comentários
+        $comments_data = array();
+        foreach ($comments as $comment) {
+            $comments_data[] = array(
+                'id' => $comment->id,
+                'comment' => $comment->comment,
+                'user_name' => $comment->user_name,
+                'is_internal' => $comment->is_internal,
+                'created_at' => $this->format_date($comment->created_at)
+            );
+        }
+        
+        wp_send_json_success(array(
+            'ticket' => $ticket_data,
+            'comments' => $comments_data
+        ));
+    }
+    
+    public function ajax_get_ticket_comments() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!is_user_logged_in()) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $ticket_id = intval($_POST['ticket_id']);
+        
+        global $wpdb;
+        $table_comments = $wpdb->prefix . 'ti_ticket_comments';
+        
+        $comments = $wpdb->get_results($wpdb->prepare(
+            "SELECT c.*, u.display_name as user_name 
+             FROM $table_comments c 
+             LEFT JOIN {$wpdb->users} u ON c.user_id = u.ID 
+             WHERE c.ticket_id = %d 
+             ORDER BY c.created_at DESC",
+            $ticket_id
+        ));
+        
+        wp_send_json_success(array('comments' => $comments));
+    }
+    
+    public function ajax_export_tickets() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('manage_ti_tickets')) {
+            wp_die('Acesso negado');
+        }
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        
+        $tickets = $wpdb->get_results(
+            "SELECT t.*, 
+                    u1.display_name as requester_name,
+                    u2.display_name as analyst_name
+             FROM $table_tickets t
+             LEFT JOIN {$wpdb->users} u1 ON t.requester_id = u1.ID
+             LEFT JOIN {$wpdb->users} u2 ON t.assigned_to = u2.ID
+             ORDER BY t.created_at DESC"
+        );
+        
+        // Headers para download
+        header('Content-Type: text/csv');
+        header('Content-Disposition: attachment; filename="tickets_' . date('Y-m-d_H-i-s') . '.csv"');
+        
+        $output = fopen('php://output', 'w');
+        
+        // Cabeçalhos
+        fputcsv($output, array('ID', 'Título', 'Descrição', 'Solicitante', 'Analista', 'Prioridade', 'Status', 'Categoria', 'Criado em', 'Atualizado em'));
+        
+        // Dados
+        foreach ($tickets as $ticket) {
+            fputcsv($output, array(
+                $ticket->id,
+                $ticket->title,
+                $ticket->description,
+                $ticket->requester_name,
+                $ticket->analyst_name ?: 'Não atribuído',
+                ti_get_priority_label($ticket->priority),
+                ti_get_status_label($ticket->status),
+                $ticket->category ?: 'N/A',
+                $ticket->created_at,
+                $ticket->updated_at
+            ));
+        }
+        
+        fclose($output);
+        exit;
+    }
+    
+    public function ajax_generate_report() {
+        check_ajax_referer('ti_tickets_nonce', 'nonce');
+        
+        if (!current_user_can('manage_ti_tickets')) {
+            wp_send_json_error('Acesso negado');
+        }
+        
+        $date_from = sanitize_text_field($_POST['date_from']);
+        $date_to = sanitize_text_field($_POST['date_to']);
+        $report_type = sanitize_text_field($_POST['report_type']);
+        
+        global $wpdb;
+        $table_tickets = $wpdb->prefix . 'ti_tickets';
+        
+        $where_clause = "WHERE created_at BETWEEN %s AND %s";
+        $params = array($date_from . ' 00:00:00', $date_to . ' 23:59:59');
+        
+        switch ($report_type) {
+            case 'status_summary':
+                $query = "SELECT status as 'Status', COUNT(*) as 'Quantidade' 
+                         FROM $table_tickets $where_clause 
+                         GROUP BY status";
+                break;
+                
+            case 'priority_summary':
+                $query = "SELECT priority as 'Prioridade', COUNT(*) as 'Quantidade' 
+                         FROM $table_tickets $where_clause 
+                         GROUP BY priority";
+                break;
+                
+            case 'category_summary':
+                $query = "SELECT COALESCE(category, 'Sem categoria') as 'Categoria', COUNT(*) as 'Quantidade' 
+                         FROM $table_tickets $where_clause 
+                         GROUP BY category";
+                break;
+                
+            case 'analyst_performance':
+                $query = "SELECT u.display_name as 'Analista', 
+                                COUNT(*) as 'Total de Tickets',
+                                SUM(CASE WHEN status = 'concluido' THEN 1 ELSE 0 END) as 'Concluídos',
+                                ROUND(AVG(CASE WHEN status = 'concluido' 
+                                    THEN DATEDIFF(updated_at, created_at) 
+                                    ELSE NULL END), 1) as 'Média de Dias para Conclusão'
+                         FROM $table_tickets t
+                         LEFT JOIN {$wpdb->users} u ON t.assigned_to = u.ID
+                         $where_clause AND assigned_to IS NOT NULL
+                         GROUP BY assigned_to, u.display_name";
+                break;
+                
+            default:
+                wp_send_json_error('Tipo de relatório inválido');
+        }
+        
+        $results = $wpdb->get_results($wpdb->prepare($query, $params));
+        
+        wp_send_json_success(array(
+            'report_data' => $results,
+            'report_type' => $report_type,
+            'date_range' => array('from' => $date_from, 'to' => $date_to)
+        ));
+    }
+    
     public function send_status_notification($ticket_id, $new_status) {
         global $wpdb;
         $table_tickets = $wpdb->prefix . 'ti_tickets';
@@ -359,7 +627,7 @@ class TI_Tickets_System {
         
         $subject = "Atualização do Ticket #{$ticket_id} - {$ticket->title}";
         $message = "Olá {$requester->display_name},\n\n";
-        $message .= "Seu ticket #{$ticket_id} teve o status atualizado para: " . strtoupper($new_status) . "\n\n";
+        $message .= "Seu ticket #{$ticket_id} teve o status atualizado para: " . ti_get_status_label($new_status) . "\n\n";
         $message .= $status_messages[$new_status] . "\n\n";
         $message .= "Detalhes do ticket:\n";
         $message .= "Título: {$ticket->title}\n";
@@ -389,7 +657,7 @@ class TI_Tickets_System {
         $message .= "Ticket #: {$ticket_id}\n";
         $message .= "Título: {$ticket->title}\n";
         $message .= "Solicitante: {$requester->display_name}\n";
-        $message .= "Prioridade: {$ticket->priority}\n";
+        $message .= "Prioridade: " . ti_get_priority_label($ticket->priority) . "\n";
         $message .= "Categoria: {$ticket->category}\n\n";
         $message .= "Descrição: {$ticket->description}\n\n";
         $message .= "Acesse o painel administrativo para mais detalhes.";
@@ -397,6 +665,13 @@ class TI_Tickets_System {
         foreach ($supervisors as $supervisor) {
             wp_mail($supervisor->user_email, $subject, $message);
         }
+    }
+    
+    /**
+     * Formatar data para exibição
+     */
+    private function format_date($date) {
+        return date('d/m/Y H:i', strtotime($date));
     }
 }
 

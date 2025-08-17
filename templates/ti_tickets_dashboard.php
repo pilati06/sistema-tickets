@@ -253,7 +253,7 @@ $analysts = get_users(array('role' => 'ti_analyst'));
                 <div class="ti-action-icon">⚙️</div>
                 <h3>Configurações</h3>
                 <p>Gerenciar usuários e configurações</p>
-                <a href="<?php echo admin_url('admin.php?page=ti-settings'); ?>" class="button">Configurar</a>
+                <a href="<?php echo admin_url('users.php'); ?>" class="button">Configurar</a>
             </div>
             
             <div class="ti-quick-action-card">
@@ -305,5 +305,145 @@ $analysts = get_users(array('role' => 'ti_analyst'));
             <div id="ti-report-results" style="display: none;">
                 <h3>Resultados do Relatório</h3>
                 <div id="ti-report-content"></div>
-                <div class="ti-report-actions">
-                    <button class="button" onclick="downloadReportPDF
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para atribuição rápida -->
+<div id="ti-quick-assign-modal" class="ti-modal" style="display: none;">
+    <div class="ti-modal-content">
+        <div class="ti-modal-header">
+            <h2>Atribuir Ticket</h2>
+            <span class="ti-modal-close">&times;</span>
+        </div>
+        <div class="ti-modal-body">
+            <form id="ti-quick-assign-form">
+                <div class="ti-form-row">
+                    <label for="quick-assign-analyst">Selecionar Analista:</label>
+                    <select id="quick-assign-analyst" required>
+                        <option value="">Selecionar analista</option>
+                        <?php foreach ($analysts as $analyst): ?>
+                        <option value="<?php echo $analyst->ID; ?>"><?php echo $analyst->display_name; ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="ti-form-row">
+                    <button type="submit" class="button button-primary">Atribuir</button>
+                    <button type="button" class="button" onclick="jQuery('#ti-quick-assign-modal').hide()">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+jQuery(document).ready(function($) {
+    var currentAssignTicketId = null;
+    
+    // Modal de relatórios
+    function showReportsModal() {
+        $('#ti-reports-modal').show();
+    }
+    
+    window.showReportsModal = showReportsModal;
+    
+    // Fechar modais
+    $('.ti-modal-close').on('click', function() {
+        $(this).closest('.ti-modal').hide();
+    });
+    
+    // Quick assign
+    $('.ti-quick-assign').on('click', function() {
+        currentAssignTicketId = $(this).data('ticket-id');
+        $('#ti-quick-assign-modal').show();
+    });
+    
+    // Submissão do formulário de atribuição
+    $('#ti-quick-assign-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var analystId = $('#quick-assign-analyst').val();
+        
+        $.post(ajaxurl, {
+            action: 'update_ticket_status',
+            ticket_id: currentAssignTicketId,
+            status: 'em_andamento',
+            assigned_to: analystId,
+            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                alert('Ticket atribuído com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao atribuir ticket: ' + response.data);
+            }
+        });
+    });
+    
+    // Mudança rápida de status
+    $('.ti-quick-status-change').on('change', function() {
+        var ticketId = $(this).data('ticket-id');
+        var newStatus = $(this).val();
+        
+        if (newStatus) {
+            $.post(ajaxurl, {
+                action: 'update_ticket_status',
+                ticket_id: ticketId,
+                status: newStatus,
+                nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+            }, function(response) {
+                if (response.success) {
+                    alert('Status atualizado com sucesso!');
+                    location.reload();
+                } else {
+                    alert('Erro ao atualizar status: ' + response.data);
+                }
+            });
+        }
+    });
+    
+    // Exportar tickets
+    function exportTickets() {
+        window.location.href = ajaxurl + '?action=export_tickets&nonce=<?php echo wp_create_nonce('ti_tickets_nonce'); ?>';
+    }
+    
+    window.exportTickets = exportTickets;
+    
+    // Formulário de relatórios
+    $('#ti-reports-form').on('submit', function(e) {
+        e.preventDefault();
+        
+        var reportType = $('#report-type').val();
+        var dateFrom = $('#report-date-from').val();
+        var dateTo = $('#report-date-to').val();
+        
+        $.post(ajaxurl, {
+            action: 'generate_report',
+            report_type: reportType,
+            date_from: dateFrom,
+            date_to: dateTo,
+            nonce: '<?php echo wp_create_nonce('ti_tickets_nonce'); ?>'
+        }, function(response) {
+            if (response.success) {
+                var data = response.data.report_data;
+                var html = '<table class="wp-list-table widefat striped"><tbody>';
+                
+                data.forEach(function(item) {
+                    html += '<tr>';
+                    Object.values(item).forEach(function(value) {
+                        html += '<td>' + value + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                
+                html += '</tbody></table>';
+                $('#ti-report-content').html(html);
+                $('#ti-report-results').show();
+            } else {
+                alert('Erro ao gerar relatório: ' + response.data);
+            }
+        });
+    });
+});
+</script>
