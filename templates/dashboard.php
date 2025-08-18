@@ -306,9 +306,28 @@ $analysts = get_users(array('role' => 'ti_analyst'));
                 </div>
             </div>
             
+            <!-- <div class="ti-ticket-comments">
+                <h3>Comentários</h3>
+                <div id="ti-comments-list"></div>
+            </div> -->
+
             <div class="ti-ticket-comments">
                 <h3>Comentários</h3>
                 <div id="ti-comments-list"></div>
+                
+                <?php if (current_user_can('comment_on_tickets') || current_user_can('manage_ti_tickets')): ?>
+                <div class="ti-add-comment">
+                    <textarea id="ti-new-comment" placeholder="Adicionar comentário..."></textarea>
+                    <div class="ti-comment-options">
+                        <?php if ($can_manage): ?>
+                        <label>
+                            <input type="checkbox" id="ti-internal-comment"> Comentário interno
+                        </label>
+                        <?php endif; ?>
+                        <button class="button button-primary" id="ti-add-comment">Adicionar Comentário</button>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -417,6 +436,33 @@ jQuery(document).ready(function($) {
             $('.ti-modal').fadeOut(300);
             $('body').removeClass('ti-modal-open');
         }
+    });
+
+    // Adicionar comentário
+    $('#ti-add-comment').on('click', function() {
+        var comment = $('#ti-new-comment').val();
+        var isInternal = $('#ti-internal-comment').is(':checked') ? 1 : 0;
+        
+        if (!comment.trim()) {
+            alert('Por favor, digite um comentário.');
+            return;
+        }
+        
+        $.post(ajaxurl, {
+            action: 'add_ticket_comment',
+            ticket_id: currentTicketId,
+            comment: comment,
+            is_internal: isInternal,
+            nonce: $('#ti-nonce').val()
+        }, function(response) {
+            if (response.success) {
+                $('#ti-new-comment').val('');
+                $('#ti-internal-comment').prop('checked', false);
+                loadComments(currentTicketId);
+            } else {
+                alert('Erro ao adicionar comentário: ' + response.data);
+            }
+        });
     });
     
     // Carregar detalhes do ticket
