@@ -50,7 +50,8 @@ jQuery(document).ready(function($) {
     
     function openTicketModal(ticketId) {
         // Mostrar modal com loading
-        $('#ti-ticket-modal').show();
+        $('#ti-ticket-modal').fadeIn(300);
+        $('body').addClass('ti-modal-open');
         $('#ti-ticket-modal .ti-modal-body').html('<div class="ti-loading">Carregando...</div>');
         
         // Carregar dados do ticket
@@ -58,7 +59,8 @@ jQuery(document).ready(function($) {
     }
     
     function closeTicketModal() {
-        $('#ti-ticket-modal').hide();
+        $('#ti-ticket-modal').fadeOut(300);
+        $('body').removeClass('ti-modal-open');
         currentTicketId = null;
     }
     

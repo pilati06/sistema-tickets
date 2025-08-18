@@ -377,7 +377,7 @@ $analysts = get_users(array('role' => 'ti_analyst'));
                 </div>
                 <div class="ti-form-row">
                     <button type="submit" class="button button-primary">Atribuir</button>
-                    <button type="button" class="button" onclick="jQuery('#ti-quick-assign-modal').hide()">Cancelar</button>
+                    <button type="button" class="button" onclick="jQuery('#ti-quick-assign-modal').fadeOut(300); jQuery('body').removeClass('ti-modal-open')">Cancelar</button>
                 </div>
             </form>
         </div>
@@ -466,7 +466,8 @@ jQuery(document).ready(function($) {
     // Quick assign
     $('.ti-quick-assign').on('click', function() {
         currentAssignTicketId = $(this).data('ticket-id');
-        $('#ti-quick-assign-modal').show();
+        $('#ti-quick-assign-modal').fadeIn(300);
+        $('body').addClass('ti-modal-open');
     });
     
     // Submissão do formulário de atribuição

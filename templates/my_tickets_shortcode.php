@@ -134,18 +134,21 @@ jQuery(document).ready(function($) {
     $('.ti-view-ticket-details').on('click', function() {
         var ticketId = $(this).data('ticket-id');
         loadTicketDetails(ticketId);
-        $('#ti-ticket-details-modal').show();
+        $('#ti-ticket-details-modal').fadeIn(300);
+        $('body').addClass('ti-modal-open');
     });
     
     // Fechar modal
     $('.ti-modal-close').on('click', function() {
-        $('#ti-ticket-details-modal').hide();
+        $('#ti-ticket-details-modal').fadeOut(300);
+        $('body').removeClass('ti-modal-open');
     });
     
     // Fechar modal clicando fora
     $(window).on('click', function(e) {
         if ($(e.target).is('#ti-ticket-details-modal')) {
-            $('#ti-ticket-details-modal').hide();
+            $('#ti-ticket-details-modal').fadeOut(300);
+            $('body').removeClass('ti-modal-open');
         }
     });
     
