@@ -43,7 +43,6 @@
 .wrap.ti-dashboard {
     background: var(--ti-gray-100);
     padding: 2rem;
-    margin: 0 -20px 0 -22px;
     min-height: calc(100vh - 60px);
 }
 
@@ -52,7 +51,7 @@
     font-size: 2.25rem;
     font-weight: 700;
     margin: 0 0 2rem 0;
-    background: linear-gradient(135deg, var(--ti-primary), var(--ti-info));
+    background: #000000;
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -66,7 +65,7 @@
 
 .ti-stats-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 1.5rem;
     margin: 2rem 0;
 }
@@ -841,3 +840,546 @@
         background: var(--ti-light);
     }
 } */
+
+/* Modal */
+.ti-modal {
+    display: none;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    backdrop-filter: blur(3px);
+}
+
+/* Melhorias no modal */
+.ti-modal-content {
+    background-color: white;
+    margin: 2% auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: modalFadeIn 0.3s ease;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Classe para prevenir rolagem do fundo quando modal está aberto */
+body.ti-modal-open {
+    overflow: hidden;
+    padding-right: 15px; /* Compensar a barra de rolagem */
+}
+
+/* Melhorias para ti-ticket-actions e ti-ticket-comments no modal */
+
+/* ===== AÇÕES DO TICKET ===== */
+.ti-ticket-actions {
+    background: linear-gradient(135deg, var(--ti-gray-100), var(--ti-white));
+    border: 1px solid var(--ti-gray-200);
+    border-radius: var(--ti-radius-lg);
+    padding: 2rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.ti-ticket-actions::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ti-primary), var(--ti-info));
+}
+
+.ti-ticket-actions h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--ti-gray-900);
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.ti-ticket-actions h3::before {
+    content: '⚡';
+    font-size: 1.125rem;
+    background: linear-gradient(135deg, var(--ti-primary), var(--ti-info));
+    padding: 0.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    font-style: normal;
+}
+
+.ti-action-row {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.5rem;
+    gap: 0.5rem;
+}
+
+.ti-action-row:last-of-type {
+    margin-bottom: 2rem;
+}
+
+.ti-action-row label {
+    font-weight: 600;
+    color: var(--ti-gray-700);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    margin-bottom: 0.5rem;
+}
+
+.ti-action-row select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--ti-gray-300);
+    border-radius: var(--ti-radius);
+    font-size: 0.875rem;
+    background: var(--ti-white);
+    color: var(--ti-gray-900);
+    transition: var(--ti-transition);
+    box-shadow: var(--ti-shadow-sm);
+}
+
+.ti-action-row select:focus {
+    outline: none;
+    border-color: var(--ti-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1), var(--ti-shadow);
+}
+
+.ti-action-row select:hover {
+    border-color: var(--ti-gray-400);
+}
+
+#ti-update-ticket {
+    background: linear-gradient(135deg, var(--ti-success), #059669);
+    color: var(--ti-white);
+    border: none;
+    padding: 0.875rem 2rem;
+    border-radius: var(--ti-radius);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--ti-transition);
+    box-shadow: var(--ti-shadow-md);
+    position: relative;
+    overflow: hidden;
+}
+
+#ti-update-ticket::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transform: translateY(-50%);
+    transition: left 0.5s ease;
+}
+
+#ti-update-ticket:hover {
+    background: linear-gradient(135deg, #059669, #047857);
+    transform: translateY(-2px);
+    box-shadow: var(--ti-shadow-lg);
+}
+
+#ti-update-ticket:hover::before {
+    left: 100%;
+}
+
+#ti-update-ticket:active {
+    transform: translateY(0);
+}
+
+/* ===== COMENTÁRIOS DO TICKET ===== */
+.ti-ticket-comments {
+    background: var(--ti-white);
+    border: 1px solid var(--ti-gray-200);
+    border-radius: var(--ti-radius-lg);
+    padding: 2rem;
+    box-shadow: var(--ti-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+.ti-ticket-comments::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--ti-info), var(--ti-primary));
+}
+
+.ti-ticket-comments h3 {
+    margin: 0 0 1.5rem 0;
+    color: var(--ti-gray-900);
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--ti-gray-200);
+}
+
+.ti-ticket-comments h3::before {
+    content: '💬';
+    font-size: 1.125rem;
+    background: linear-gradient(135deg, var(--ti-info), var(--ti-primary));
+    padding: 0.5rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    font-style: normal;
+}
+
+/* Lista de comentários */
+#ti-comments-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 1.5rem;
+    padding-right: 0.5rem;
+}
+
+#ti-comments-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+#ti-comments-list::-webkit-scrollbar-track {
+    background: var(--ti-gray-100);
+    border-radius: 3px;
+}
+
+#ti-comments-list::-webkit-scrollbar-thumb {
+    background: var(--ti-gray-300);
+    border-radius: 3px;
+}
+
+#ti-comments-list::-webkit-scrollbar-thumb:hover {
+    background: var(--ti-gray-400);
+}
+
+.ti-comment {
+    background: linear-gradient(135deg, var(--ti-gray-100), rgba(248, 250, 252, 0.5));
+    border: 1px solid var(--ti-gray-200);
+    border-left: 4px solid var(--ti-primary);
+    border-radius: var(--ti-radius);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    transition: var(--ti-transition);
+    position: relative;
+}
+
+.ti-comment:hover {
+    background: linear-gradient(135deg, var(--ti-white), var(--ti-gray-100));
+    border-left-color: var(--ti-info);
+    transform: translateX(2px);
+    box-shadow: var(--ti-shadow);
+}
+
+.ti-comment:last-child {
+    margin-bottom: 0;
+}
+
+.ti-comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--ti-gray-200);
+}
+
+.ti-comment-header strong {
+    color: var(--ti-gray-900);
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.ti-comment-date {
+    font-size: 0.75rem;
+    color: var(--ti-gray-500);
+    font-weight: 500;
+}
+
+.ti-internal-badge {
+    background: linear-gradient(135deg, var(--ti-secondary), var(--ti-gray-500));
+    color: var(--ti-white);
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-left: 0.5rem;
+    box-shadow: var(--ti-shadow-sm);
+}
+
+.ti-comment-content {
+    color: var(--ti-gray-700);
+    line-height: 1.6;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+/* Adicionar comentário */
+.ti-add-comment {
+    background: linear-gradient(135deg, var(--ti-gray-100), transparent);
+    border: 2px dashed var(--ti-gray-300);
+    border-radius: var(--ti-radius-lg);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    transition: var(--ti-transition);
+}
+
+.ti-add-comment:hover {
+    border-color: var(--ti-primary);
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), transparent);
+}
+
+#ti-new-comment {
+    width: 100%;
+    min-height: 120px;
+    padding: 0.875rem;
+    border: 2px solid var(--ti-gray-300);
+    border-radius: var(--ti-radius);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--ti-gray-900);
+    background: var(--ti-white);
+    transition: var(--ti-transition);
+    resize: vertical;
+    font-family: inherit;
+}
+
+#ti-new-comment:focus {
+    outline: none;
+    border-color: var(--ti-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+#ti-new-comment::placeholder {
+    color: var(--ti-gray-400);
+    font-style: italic;
+}
+
+.ti-comment-options {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    gap: 1rem;
+}
+
+.ti-comment-options label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--ti-gray-700);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.ti-comment-options input[type="checkbox"] {
+    width: 1.125rem;
+    height: 1.125rem;
+    border: 2px solid var(--ti-gray-300);
+    border-radius: var(--ti-radius-sm);
+    cursor: pointer;
+    transition: var(--ti-transition);
+}
+
+.ti-comment-options input[type="checkbox"]:checked {
+    background-color: var(--ti-primary);
+    border-color: var(--ti-primary);
+}
+
+#ti-add-comment {
+    background: linear-gradient(135deg, var(--ti-primary), var(--ti-primary-dark));
+    color: var(--ti-white);
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--ti-radius);
+    font-weight: 600;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: var(--ti-transition);
+    box-shadow: var(--ti-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+#ti-add-comment::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transform: translateY(-50%);
+    transition: left 0.5s ease;
+}
+
+#ti-add-comment:hover {
+    background: linear-gradient(135deg, var(--ti-primary-dark), #1e40af);
+    transform: translateY(-2px);
+    box-shadow: var(--ti-shadow-md);
+}
+
+#ti-add-comment:hover::before {
+    left: 100%;
+}
+
+#ti-add-comment:active {
+    transform: translateY(0);
+}
+
+/* Estados especiais */
+.ti-no-comments {
+    text-align: center;
+    padding: 2rem;
+    color: var(--ti-gray-500);
+    font-style: italic;
+    background: linear-gradient(135deg, var(--ti-gray-100), transparent);
+    border: 2px dashed var(--ti-gray-300);
+    border-radius: var(--ti-radius-lg);
+    margin-bottom: 1rem;
+}
+
+.ti-no-comments::before {
+    content: '📝';
+    display: block;
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Loading states */
+.ti-comment.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.ti-add-comment.loading {
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.ti-add-comment.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    right: 1rem;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 0;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: var(--ti-white);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .ti-ticket-actions,
+    .ti-ticket-comments {
+        padding: 1.5rem;
+    }
+    
+    .ti-comment-options {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .ti-comment-options label {
+        justify-content: center;
+    }
+    
+    #ti-comments-list {
+        max-height: 200px;
+    }
+    
+    .ti-action-row {
+        margin-bottom: 1rem;
+    }
+    
+    #ti-update-ticket,
+    #ti-add-comment {
+        width: 100%;
+        padding: 1rem;
+    }
+}
+
+/* Animações */
+.ti-comment {
+    animation: commentSlideIn 0.3s ease-out;
+}
+
+@keyframes commentSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.ti-ticket-actions,
+.ti-ticket-comments {
+    animation: sectionFadeIn 0.5s ease-out;
+}
+
+@keyframes sectionFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Hover effects para elementos interativos */
+.ti-action-row select option {
+    padding: 0.5rem;
+}
+
+.ti-action-row select option:hover {
+    background-color: var(--ti-primary);
+    color: var(--ti-white);
+}
