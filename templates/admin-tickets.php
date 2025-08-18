@@ -59,60 +59,62 @@ $analysts = get_users(array('role' => 'ti_analyst'));
         </select>
     </div>
     
-    <table class="wp-list-table widefat fixed striped ti-tickets-table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Título</th>
-                <th>Solicitante</th>
-                <th>Prioridade</th>
-                <th>Status</th>
-                <th>Analista</th>
-                <th>Data</th>
-                <th>Ações</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($tickets as $ticket): ?>
-            <?php
-            $requester = get_user_by('ID', $ticket->requester_id);
-            $analyst = $ticket->assigned_to ? get_user_by('ID', $ticket->assigned_to) : null;
-            ?>
-            <tr data-status="<?php echo $ticket->status; ?>" data-priority="<?php echo $ticket->priority; ?>">
-                <td>#<?php echo $ticket->id; ?></td>
-                <td>
-                    <strong><?php echo esc_html($ticket->title); ?></strong>
-                    <div class="ti-ticket-description">
-                        <?php echo wp_trim_words(esc_html($ticket->description), 15); ?>
-                    </div>
-                </td>
-                <td><?php echo $requester ? $requester->display_name : 'N/A'; ?></td>
-                <td>
-                    <span class="ti-priority-badge" style="background-color: <?php echo ti_get_priority_color($ticket->priority); ?>">
-                        <?php echo ti_get_priority_label($ticket->priority); ?>
-                    </span>
-                </td>
-                <td>
-                    <span class="ti-status-badge" style="background-color: <?php echo ti_get_status_color($ticket->status); ?>">
-                        <?php echo ti_get_status_label($ticket->status); ?>
-                    </span>
-                </td>
-                <td><?php echo $analyst ? $analyst->display_name : 'Não atribuído'; ?></td>
-                <td><?php echo date('d/m/Y H:i', strtotime($ticket->created_at)); ?></td>
-                <td>
-                    <button class="button button-small ti-view-ticket" data-ticket-id="<?php echo $ticket->id; ?>">
-                        Ver
-                    </button>
-                    <?php if ($can_manage): ?>
-                    <button class="button button-small ti-edit-ticket" data-ticket-id="<?php echo $ticket->id; ?>">
-                        Editar
-                    </button>
-                    <?php endif; ?>
-                </td>
-            </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+    <div class="ti-recent-tickets-table">
+        <table class="wp-list-table widefat fixed striped ti-tickets-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Título</th>
+                    <th>Solicitante</th>
+                    <th>Prioridade</th>
+                    <th>Status</th>
+                    <th>Analista</th>
+                    <th>Data</th>
+                    <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($tickets as $ticket): ?>
+                <?php
+                $requester = get_user_by('ID', $ticket->requester_id);
+                $analyst = $ticket->assigned_to ? get_user_by('ID', $ticket->assigned_to) : null;
+                ?>
+                <tr data-status="<?php echo $ticket->status; ?>" data-priority="<?php echo $ticket->priority; ?>">
+                    <td>#<?php echo $ticket->id; ?></td>
+                    <td>
+                        <strong><?php echo esc_html($ticket->title); ?></strong>
+                        <div class="ti-ticket-description">
+                            <?php echo wp_trim_words(esc_html($ticket->description), 15); ?>
+                        </div>
+                    </td>
+                    <td><?php echo $requester ? $requester->display_name : 'N/A'; ?></td>
+                    <td>
+                        <span class="ti-priority-badge" style="background-color: <?php echo ti_get_priority_color($ticket->priority); ?>">
+                            <?php echo ti_get_priority_label($ticket->priority); ?>
+                        </span>
+                    </td>
+                    <td>
+                        <span class="ti-status-badge" style="background-color: <?php echo ti_get_status_color($ticket->status); ?>">
+                            <?php echo ti_get_status_label($ticket->status); ?>
+                        </span>
+                    </td>
+                    <td><?php echo $analyst ? $analyst->display_name : 'Não atribuído'; ?></td>
+                    <td><?php echo date('d/m/Y H:i', strtotime($ticket->created_at)); ?></td>
+                    <td>
+                        <button class="button button-small ti-view-ticket" data-ticket-id="<?php echo $ticket->id; ?>">
+                            Ver
+                        </button>
+                        <?php if ($can_manage): ?>
+                        <button class="button button-small ti-edit-ticket" data-ticket-id="<?php echo $ticket->id; ?>">
+                            Editar
+                        </button>
+                        <?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
 </div>
 
 <!-- Modal para visualizar/editar ticket -->
