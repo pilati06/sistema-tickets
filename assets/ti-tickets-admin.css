@@ -39,13 +39,6 @@
     --ti-transition-slow: all 0.3s ease-in-out;
 }
 
-/* Dashboard Container */
-.wrap.ti-dashboard {
-    background: var(--ti-gray-100);
-    padding: 2rem;
-    min-height: calc(100vh - 60px);
-}
-
 .wrap.ti-dashboard h1 {
     color: var(--ti-gray-900);
     font-size: 2.25rem;
@@ -1385,12 +1378,6 @@ body.ti-modal-open {
 }
 
 /* ===== ESTILOS GERAIS ===== */
-.wrap {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-}
 
 .wrap h1 {
     color: #1d2327;
